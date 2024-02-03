@@ -6,8 +6,10 @@ class Play extends Phaser.Scene {
     init() {
         // useful variables
         this.SHOT_VELOCITY_X = 200
-        this.SHOT_VELOCITY_Y_MIN = 700
+        this.SHOT_VELOCITY_Y_MIN = 700  
         this.SHOT_VELOCITY_Y_MAX = 1100
+        //initial ball position
+        this.initialPos = {x: width / 2, y: height - height / 10}
 
     }
 
@@ -32,7 +34,7 @@ class Play extends Phaser.Scene {
         this.cup.body.setImmovable(true)
         
         // add ball
-        this.ball = this.physics.add.sprite(width / 2, height - height / 10, 'ball')
+        this.ball = this.physics.add.sprite(this.initialPos.x, this.initialPos.y, 'ball')
         //adjust bounds
         this.ball.body.setCircle(this.ball.width / 2)
         this.ball.body.setCollideWorldBounds(true)
@@ -47,16 +49,13 @@ class Play extends Phaser.Scene {
         let wallB = this.physics.add.sprite(0, height / 2, 'wall')
         wallB.setX(Phaser.Math.Between(0 + wallB.width / 2, width - wallB.width / 2))
         wallB.body.setImmovable(true)
+        
+        //makes wall B move left and right
         wallB.setVelocityX(100)
         wallB.body.setBounce(1)
-
-        this.physics.world.on('worldbounds', (body, up, down, left,right) => {
-            if(body === this.wallB.body) {
-                if (left || right) {
-                    this.wallB.body.setVelocityX(-this.wallB.body.velocity.x)
-                }
-            }
-        });
+        wallB.body.setCollideWorldBounds(true)
+       
+        
 
         this.walls = this.add.group([wallA, wallB])
 
@@ -66,16 +65,24 @@ class Play extends Phaser.Scene {
         this.oneWay.body.setImmovable(true)
         this.oneWay.body.checkCollision.down = false
 
-        // add pointer input
+        // add pointer input based on x and y axis input
         this.input.on('pointerdown', (pointer) => {
-            let shotDirection = pointer.y <= this.ball.y ? 1 : -1
-            this.ball.body.setVelocityX(Phaser.Math.Between(-this.SHOT_VELOCITY_X, this.SHOT_VELOCITY_X))
-            this.ball.body.setVelocityY(Phaser.Math.Between(this.SHOT_VELOCITY_Y_MIN, this.SHOT_VELOCITY_Y_MAX) * shotDirection)
-        })
+            const distanceX = pointer.x - this.ball.x
+            const distanceY = pointer.y - this.ball.y
+            const angle = Math.atan2(distanceY, distanceX)
+
+            const velocityX = -Math.cos(angle) * this.SHOT_VELOCITY_X
+            const velocityY = -Math.sin(angle) * this.SHOT_VELOCITY_Y_MAX
+
+            this.ball.body.setVelocity(velocityX, velocityY)
+        });
 
         // cup/ball collision
         this.physics.add.collider(this.ball, this.cup, (ball, cup) => {
-            ball.destroy()
+            //ball.destroy()
+            //resets posiition and sets initial velocity to 0 so it doesn't move upon reset till the player shoots again
+            ball.setPosition(this.initialPos.x, this.initialPos.y)
+            ball.body.setVelocity(0, 0)
         })
 
         // ball/wall collision
@@ -92,8 +99,8 @@ class Play extends Phaser.Scene {
 /*
 CODE CHALLENGE
 Try to implement at least 3/4 of the following features during the remainder of class (hint: each takes roughly 15 or fewer lines of code to implement):
-[ ] Add ball reset logic on successful shot
-[ ] Improve shot logic by making pointer’s relative x-position shoot the ball in correct x-direction
-[ ] Make one obstacle move left/right and bounce against screen edges
+[x] Add ball reset logic on successful shot
+[x] Improve shot logic by making pointer’s relative x-position shoot the ball in correct x-direction
+[x] Make one obstacle move left/right and bounce against screen edges
 [ ] Create and display shot counter, score, and successful shot percentage
 */
